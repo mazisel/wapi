@@ -27,10 +27,6 @@ COPY packages/db/package.json ./packages/db/
 COPY apps/admin ./apps/admin
 COPY package.json pnpm-workspace.yaml ./
 
-# WS URL build sırasında bake edilir
-ARG NEXT_PUBLIC_WS_URL=ws://localhost:3000
-ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
-
 # Build workspace root'tan çalıştır
 RUN pnpm --filter @wapi/admin build
 

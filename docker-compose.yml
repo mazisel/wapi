@@ -73,8 +73,6 @@ services:
     build:
       context: .
       dockerfile: apps/admin/Dockerfile
-      args:
-        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:3000}
     restart: unless-stopped
     depends_on:
       api:

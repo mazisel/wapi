@@ -97,6 +97,11 @@ export async function deviceRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "Cihaz bulunamadı" });
     }
 
+    // Bağlı değilse yeniden bağlanmayı tetikle — QR üretilsin
+    if (!deviceManager.isConnected(deviceId)) {
+      deviceManager.createDevice(deviceId).catch(() => {});
+    }
+
     const token = generateQrToken();
     registerQrToken(token, deviceId);
 

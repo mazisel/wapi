@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { wsUrl, apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 type QrMessage =
   | { type: "qr"; data: string }
@@ -16,11 +16,19 @@ interface Props {
   onClose: () => void;
 }
 
+// WS URL'yi build-time değişkene bağlama — her zaman mevcut sayfanın
+// hostname'ini kullan, port 3000 (API portu) ile
+function buildWsUrl(path: string): string {
+  if (typeof window === "undefined") return "";
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = window.location.hostname;
+  const apiPort = process.env.NEXT_PUBLIC_API_PORT ?? "3000";
+  return `${proto}//${host}:${apiPort}${path}`;
+}
+
 export function QRScanner({ deviceId, onConnected, onClose }: Props) {
   const [qrSrc, setQrSrc] = useState<string | null>(null);
-  const [status, setStatus] = useState<
-    "waiting" | "connected" | "timeout" | "error"
-  >("waiting");
+  const [status, setStatus] = useState<"waiting" | "connected" | "timeout" | "error">("waiting");
   const [errorMsg, setErrorMsg] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -29,12 +37,16 @@ export function QRScanner({ deviceId, onConnected, onClose }: Props) {
 
     apiFetch<{ token: string }>(`/api/v1/devices/${deviceId}/qr-token`)
       .then(({ token }) => {
-        ws = new WebSocket(`${wsUrl(`/ws/qr/${deviceId}`)}?token=${token}`);
+        const url = buildWsUrl(`/ws/qr/${deviceId}?token=${token}`);
+        ws = new WebSocket(url);
         wsRef.current = ws;
+
+        ws.onopen = () => {
+          // Bağlantı açıldı — sunucu cached QR varsa hemen gönderecek
+        };
 
         ws.onmessage = (event) => {
           const msg: QrMessage = JSON.parse(event.data);
-
           if (msg.type === "qr") {
             setQrSrc(msg.data);
           } else if (msg.type === "connected") {
@@ -50,7 +62,7 @@ export function QRScanner({ deviceId, onConnected, onClose }: Props) {
 
         ws.onerror = () => {
           setStatus("error");
-          setErrorMsg("WebSocket bağlantı hatası");
+          setErrorMsg(`WebSocket bağlantısı kurulamadı (${buildWsUrl(`/ws/qr/${deviceId}`)})`);
         };
       })
       .catch((err) => {
@@ -77,7 +89,7 @@ export function QRScanner({ deviceId, onConnected, onClose }: Props) {
 
         {status === "waiting" && !qrSrc && (
           <div className="w-64 h-64 mx-auto flex items-center justify-center bg-gray-100 rounded-lg">
-            <span className="text-gray-400 text-sm">QR yükleniyor...</span>
+            <span className="text-gray-400 text-sm">QR bekleniyor...</span>
           </div>
         )}
 
@@ -90,13 +102,19 @@ export function QRScanner({ deviceId, onConnected, onClose }: Props) {
 
         {status === "timeout" && (
           <div className="py-8">
-            <p className="text-red-500">QR kodu süresi doldu. Sayfayı yenileyin.</p>
+            <p className="text-red-500 mb-3">QR kodu süresi doldu.</p>
+            <button
+              onClick={onClose}
+              className="text-sm bg-green-600 text-white px-4 py-2 rounded-lg"
+            >
+              Tekrar Dene
+            </button>
           </div>
         )}
 
         {status === "error" && (
           <div className="py-8">
-            <p className="text-red-500">{errorMsg}</p>
+            <p className="text-red-500 text-sm">{errorMsg}</p>
           </div>
         )}
 

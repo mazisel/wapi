@@ -9,8 +9,10 @@ type QrSubscriber = {
 };
 
 const subscribers = new Map<string, Set<QrSubscriber>>();
-
 const qrTokens = new Map<string, { deviceId: string; expiresAt: number }>();
+
+// Son QR'ı cache'le — WS geç bağlanırsa hemen gönderilir
+const lastQrCache = new Map<string, string>();
 
 export function registerQrToken(token: string, deviceId: string): void {
   qrTokens.set(token, {
@@ -31,9 +33,9 @@ export function validateQrToken(token: string, deviceId: string): boolean {
   return true;
 }
 
-export function subscribeQr(deviceId: string, ws: WebSocket): void {
+export async function subscribeQr(deviceId: string, ws: WebSocket): Promise<void> {
   const timer = setTimeout(() => {
-    sendToDevice(deviceId, { type: "timeout" });
+    sendToWs(ws, { type: "timeout" });
     ws.close();
   }, config.QR_WS_TIMEOUT_MS);
 
@@ -48,11 +50,18 @@ export function subscribeQr(deviceId: string, ws: WebSocket): void {
     clearTimeout(timer);
     subscribers.get(deviceId)?.delete(subscriber);
   });
+
+  // Cache'de QR varsa hemen gönder — geç bağlanan istemciler için
+  const cached = lastQrCache.get(deviceId);
+  if (cached) {
+    sendToWs(ws, { type: "qr", data: cached });
+  }
 }
 
 export async function broadcastQr(deviceId: string, qrString: string): Promise<void> {
   try {
     const png = await QRCode.toDataURL(qrString);
+    lastQrCache.set(deviceId, png);
     sendToDevice(deviceId, { type: "qr", data: png });
   } catch (err) {
     logger.error({ err, deviceId }, "QR PNG oluşturulamadı");
@@ -60,31 +69,34 @@ export async function broadcastQr(deviceId: string, qrString: string): Promise<v
 }
 
 export function broadcastConnected(deviceId: string, phone: string): void {
+  lastQrCache.delete(deviceId);
   sendToDevice(deviceId, { type: "connected", data: { phone } });
   cleanupDeviceSubscribers(deviceId);
 }
 
 export function broadcastDisconnected(deviceId: string): void {
+  lastQrCache.delete(deviceId);
   sendToDevice(deviceId, { type: "disconnected" });
   cleanupDeviceSubscribers(deviceId);
+}
+
+function sendToWs(ws: WebSocket, payload: unknown): void {
+  if (ws.readyState === ws.OPEN) {
+    ws.send(JSON.stringify(payload));
+  }
 }
 
 function sendToDevice(deviceId: string, payload: unknown): void {
   const subs = subscribers.get(deviceId);
   if (!subs) return;
-  const json = JSON.stringify(payload);
   for (const sub of subs) {
-    if (sub.ws.readyState === sub.ws.OPEN) {
-      sub.ws.send(json);
-    }
+    sendToWs(sub.ws, payload);
   }
 }
 
 function cleanupDeviceSubscribers(deviceId: string): void {
   const subs = subscribers.get(deviceId);
   if (!subs) return;
-  for (const sub of subs) {
-    clearTimeout(sub.timer);
-  }
+  for (const sub of subs) clearTimeout(sub.timer);
   subscribers.delete(deviceId);
 }
