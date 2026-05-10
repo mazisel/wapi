@@ -53,6 +53,10 @@ export async function subscribeQr(deviceId: string, ws: WebSocket): Promise<void
 
   // Cache'de QR varsa hemen gönder — geç bağlanan istemciler için
   const cached = lastQrCache.get(deviceId);
+  logger.info(
+    { deviceId, hasCached: !!cached, subscriberCount: subscribers.get(deviceId)!.size },
+    "QR WS subscribed"
+  );
   if (cached) {
     sendToWs(ws, { type: "qr", data: cached });
   }
@@ -62,6 +66,11 @@ export async function broadcastQr(deviceId: string, qrString: string): Promise<v
   try {
     const png = await QRCode.toDataURL(qrString);
     lastQrCache.set(deviceId, png);
+    const subs = subscribers.get(deviceId);
+    logger.info(
+      { deviceId, subscriberCount: subs?.size ?? 0 },
+      "QR broadcast ediliyor"
+    );
     sendToDevice(deviceId, { type: "qr", data: png });
   } catch (err) {
     logger.error({ err, deviceId }, "QR PNG oluşturulamadı");

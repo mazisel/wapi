@@ -11,6 +11,7 @@ import {
 } from "../../whatsapp/qr.js";
 import { generateId, generateQrToken } from "../../utils/crypto.js";
 import { config } from "../../config/index.js";
+import { logger } from "../../utils/logger.js";
 
 const createDeviceSchema = z.object({
   name: z.string().min(1).max(100),
@@ -100,9 +101,15 @@ export async function deviceRoutes(app: FastifyInstance) {
     }
 
     // Her zaman oturumu sıfırla → Baileys garantili QR üretir
-    deviceManager.startQRSession(deviceId).catch((err) => {
-      app.log.error({ err, deviceId }, "QR oturumu başlatılamadı");
-    });
+    logger.info({ deviceId }, "QR token isteği — startQRSession çağrılıyor");
+    deviceManager.startQRSession(deviceId).then(
+      () => logger.info({ deviceId }, "startQRSession tamamlandı"),
+      (err) =>
+        logger.error(
+          { err: err?.message ?? String(err), deviceId },
+          "startQRSession hatası"
+        )
+    );
 
     const token = generateQrToken();
     registerQrToken(token, deviceId);

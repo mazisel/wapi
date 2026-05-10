@@ -28,8 +28,19 @@ export class WhatsAppSocket {
   async initialize(): Promise<void> {
     if (this.isDestroyed) return;
 
+    logger.info({ deviceId: this.deviceId }, "Baileys initialize başlıyor");
+
     const { version } = await fetchLatestBaileysVersion();
+    logger.info(
+      { deviceId: this.deviceId, version },
+      "Baileys versiyonu alındı"
+    );
+
     const { state, saveCreds } = await useMultiFileAuthState(this.sessionDir);
+    logger.info(
+      { deviceId: this.deviceId, hasCreds: !!state.creds.me },
+      "Auth state yüklendi"
+    );
 
     const log = logger.child({ deviceId: this.deviceId });
 
@@ -45,10 +56,17 @@ export class WhatsAppSocket {
       generateHighQualityLinkPreview: false,
     });
 
+    logger.info({ deviceId: this.deviceId }, "Baileys socket oluşturuldu");
+
     this.socket.ev.on("creds.update", saveCreds);
 
     this.socket.ev.on("connection.update", async (update) => {
       const { connection, lastDisconnect, qr } = update;
+
+      logger.info(
+        { deviceId: this.deviceId, connection, hasQr: !!qr },
+        "connection.update"
+      );
 
       if (qr) {
         await broadcastQr(this.deviceId, qr);
