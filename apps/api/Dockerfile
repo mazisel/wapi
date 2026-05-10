@@ -6,11 +6,11 @@ RUN apk add --no-cache curl
 FROM base AS deps
 WORKDIR /app
 
-# Monorepo kök dosyaları
+# Workspace kök + tüm paket tanımları
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-# Workspace paket tanımları
 COPY packages/db/package.json ./packages/db/
 COPY apps/api/package.json ./apps/api/
+COPY apps/admin/package.json ./apps/admin/
 
 RUN pnpm install --frozen-lockfile --config.block-exotic-subdeps=false
 

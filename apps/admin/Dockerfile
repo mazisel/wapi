@@ -5,7 +5,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 FROM base AS deps
 WORKDIR /app
 
+# Workspace kök + tüm paket tanımları (pnpm workspace bunları bekliyor)
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/db/package.json ./packages/db/
 COPY apps/admin/package.json ./apps/admin/
 
 RUN pnpm install --frozen-lockfile --config.block-exotic-subdeps=false
@@ -14,18 +16,23 @@ RUN pnpm install --frozen-lockfile --config.block-exotic-subdeps=false
 FROM base AS builder
 WORKDIR /app
 
+# node_modules
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=deps /app/apps/admin/node_modules ./apps/admin/node_modules
 
+# Kaynak kodlar
+COPY packages/db/src ./packages/db/src
+COPY packages/db/package.json ./packages/db/
 COPY apps/admin ./apps/admin
+COPY package.json pnpm-workspace.yaml ./
 
-# WS URL: bake-time arg (Portainer build args ile ayarlanabilir)
-# API_URL: runtime'da set edilir, NOT baked in
+# WS URL build sırasında bake edilir
 ARG NEXT_PUBLIC_WS_URL=ws://localhost:3000
 ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
 
-WORKDIR /app/apps/admin
-RUN pnpm build
+# Build workspace root'tan çalıştır
+RUN pnpm --filter @wapi/admin build
 
 # --- Runtime katmanı ---
 FROM node:22-alpine AS runner
@@ -34,9 +41,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001
 ENV HOSTNAME=0.0.0.0
-
-# API_URL: runtime'da Docker Compose / Portainer tarafından set edilir
-# Proxy route.ts bu değişkeni kullanır (NEXT_PUBLIC_ değil)
 
 COPY --from=builder /app/apps/admin/.next/standalone ./
 COPY --from=builder /app/apps/admin/.next/static ./apps/admin/.next/static
