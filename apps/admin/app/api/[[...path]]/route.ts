@@ -12,10 +12,14 @@ async function proxy(request: NextRequest): Promise<Response> {
   const headers = new Headers(request.headers);
   headers.delete("host");
 
-  const body =
+  const rawBody =
     request.method !== "GET" && request.method !== "HEAD"
       ? await request.arrayBuffer()
       : undefined;
+
+  // Boş body varsa Content-Type'ı da kaldır → Fastify "body cannot be empty" hatası vermesin
+  const body = rawBody && rawBody.byteLength > 0 ? rawBody : undefined;
+  if (!body) headers.delete("content-type");
 
   const res = await fetch(targetUrl, {
     method: request.method,

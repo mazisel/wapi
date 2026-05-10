@@ -20,15 +20,18 @@ export async function apiFetch<T>(
       ? (localStorage.getItem("wapi_master_key") ?? "")
       : "";
 
-  // Relative URL — Next.js proxy'den geçer, böylece tarayıcı Docker iç hostuna bağlanmak zorunda kalmaz
-  const res = await fetch(path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${masterKey}`,
-      ...options.headers,
-    },
-  });
+  // Content-Type'ı sadece body olan requestlere ekle —
+  // boş body + application/json Fastify'da 400 üretir
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${masterKey}`,
+    ...(options.headers as Record<string, string>),
+  };
+  if (options.body != null) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  // Relative URL — Next.js proxy'den geçer
+  const res = await fetch(path, { ...options, headers });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Bilinmeyen hata" }));
