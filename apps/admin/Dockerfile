@@ -41,7 +41,7 @@ ENV HOSTNAME=0.0.0.0
 # outputFileTracingRoot=../.. ile standalone monorepo kökünden çıkıyor
 COPY --from=builder /app/apps/admin/.next/standalone ./
 COPY --from=builder /app/apps/admin/.next/static ./apps/admin/.next/static
-COPY --from=builder /app/apps/admin/public ./apps/admin/public
+# Not: apps/admin/public boş olduğundan kopyalanmıyor (git boş klasör saklamaz)
 
 EXPOSE 3001
 
