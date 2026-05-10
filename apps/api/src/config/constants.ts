@@ -1,4 +1,5 @@
-export const QUEUE_NAME_PREFIX = "wapi:device";
+// BullMQ queue isimlerinde ":" kullanılamaz → tire kullan
+export const QUEUE_NAME_PREFIX = "wapi-device";
 
 export const RECONNECT_DELAYS_MS = [5_000, 10_000, 30_000, 60_000, 120_000];
 
