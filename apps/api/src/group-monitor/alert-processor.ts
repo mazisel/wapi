@@ -50,12 +50,20 @@ async function processWave1(alertId: string): Promise<void> {
     `Mesaj: ${alert.messageText ?? "(içerik yok)"}\n` +
     `Lütfen ilgilenin.`;
 
-  for (const jid of monitor.alertGroupJids ?? []) {
+  const targets = monitor.alertGroupJids ?? [];
+  let sent = 0;
+  for (const jid of targets) {
     try {
       await socket.sendMessage(jid, { text });
+      sent++;
     } catch (err) {
       logger.error({ err, jid, alertId }, "Wave1 grup mesajı gönderilemedi");
     }
+  }
+
+  if (targets.length > 0 && sent === 0) {
+    // Tüm gönderimler başarısız — retry'a bırak
+    throw new Error("Wave1: hiçbir gruba gönderilemedi");
   }
 
   await groupAlertRepo.updateStatus(alertId, "wave1_sent", { wave1SentAt: new Date() });
