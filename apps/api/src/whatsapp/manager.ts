@@ -22,24 +22,55 @@ class DeviceManager {
     );
   }
 
-  async connect(deviceId: string, sessionDir: string): Promise<void> {
+  private async connect(deviceId: string, sessionDir: string): Promise<void> {
+    // Varsa önce eski socket'ı temizle
+    const existing = this.sockets.get(deviceId);
+    if (existing) {
+      await existing.destroy().catch(() => {});
+      this.sockets.delete(deviceId);
+    }
+
     const absDir = path.resolve(sessionDir);
     await fs.mkdir(absDir, { recursive: true });
 
     const socket = new WhatsAppSocket(deviceId, absDir);
     this.sockets.set(deviceId, socket);
-    await socket.initialize();
+    try {
+      await socket.initialize();
+    } catch (err) {
+      this.sockets.delete(deviceId);
+      throw err;
+    }
   }
 
   async createDevice(id: string): Promise<void> {
+    // Zaten çalışan bir socket varsa yeniden başlatma
+    if (this.sockets.has(id)) {
+      logger.info({ deviceId: id }, "Socket zaten mevcut, atlanıyor");
+      return;
+    }
     const sessionDir = path.join(config.SESSION_BASE_DIR, id);
+    await this.connect(id, sessionDir);
+  }
+
+  // Kullanıcı QR taramak istediğinde çağrılır:
+  // mevcut oturumu temizler, yeni Baileys socket başlatır → her zaman QR üretilir
+  async startQRSession(id: string): Promise<void> {
+    const existing = this.sockets.get(id);
+    if (existing) {
+      await existing.destroy().catch(() => {});
+      this.sockets.delete(id);
+    }
+    const sessionDir = path.join(config.SESSION_BASE_DIR, id);
+    // Eski oturum dosyalarını temizle → Baileys yeni QR üretir
+    await fs.rm(sessionDir, { recursive: true, force: true });
     await this.connect(id, sessionDir);
   }
 
   async removeDevice(deviceId: string): Promise<void> {
     const socket = this.sockets.get(deviceId);
     if (socket) {
-      await socket.destroy();
+      await socket.destroy().catch(() => {});
       this.sockets.delete(deviceId);
     }
 

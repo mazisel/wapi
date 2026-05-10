@@ -116,8 +116,16 @@ export class WhatsAppSocket {
 
   async destroy(): Promise<void> {
     this.isDestroyed = true;
-    await this.socket?.logout();
-    this.socket?.end(undefined);
+    try {
+      await this.socket?.logout();
+    } catch {
+      // socket bağlı olmayabilir, logout hatasını yoksay
+    }
+    try {
+      this.socket?.end(undefined);
+    } catch {
+      // ignore
+    }
     this.socket = null;
   }
 }

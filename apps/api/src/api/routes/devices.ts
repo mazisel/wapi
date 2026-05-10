@@ -71,7 +71,9 @@ export async function deviceRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "Cihaz bulunamadı" });
     }
 
+    // Socket'ı kapat ve session klasörünü temizle
     await deviceManager.removeDevice(deviceId);
+    // DB kaydını sil — ON DELETE CASCADE ilişkili kayıtları da siler
     await deviceRepo.delete(deviceId);
 
     reply.send({ success: true });
@@ -97,10 +99,10 @@ export async function deviceRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "Cihaz bulunamadı" });
     }
 
-    // Bağlı değilse yeniden bağlanmayı tetikle — QR üretilsin
-    if (!deviceManager.isConnected(deviceId)) {
-      deviceManager.createDevice(deviceId).catch(() => {});
-    }
+    // Her zaman oturumu sıfırla → Baileys garantili QR üretir
+    deviceManager.startQRSession(deviceId).catch((err) => {
+      app.log.error({ err, deviceId }, "QR oturumu başlatılamadı");
+    });
 
     const token = generateQrToken();
     registerQrToken(token, deviceId);
