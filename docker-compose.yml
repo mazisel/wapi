@@ -1,0 +1,90 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - wapi_internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Redis portu dışarıya açılmıyor — sadece iç ağ
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-3000}:3000"
+    networks:
+      - wapi_internal
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      REDIS_URL: redis://redis:6379
+      SESSION_BASE_DIR: /app/data/sessions
+      DATABASE_URL: ${DATABASE_URL}
+      MASTER_API_KEY: ${MASTER_API_KEY}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      HOURLY_MSG_LIMIT: ${HOURLY_MSG_LIMIT:-60}
+      DAILY_MSG_LIMIT: ${DAILY_MSG_LIMIT:-500}
+      MIN_MSG_GAP_MS: ${MIN_MSG_GAP_MS:-3000}
+    volumes:
+      - app_sessions:/app/data/sessions
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    labels:
+      - "wapi.service=api"
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        # Build sırasında WS URL belirlenir — sunucu IP'nizi veya domain'inizi yazın
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:3000}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${ADMIN_PORT:-3001}:3001"
+    networks:
+      - wapi_internal
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # Sunucu tarafı proxy → iç Docker ağı üzerinden API'ye ulaşır
+      API_URL: http://api:3000
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    labels:
+      - "wapi.service=admin"
+
+networks:
+  wapi_internal:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+  app_sessions:
+    driver: local

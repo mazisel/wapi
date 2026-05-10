@@ -1,0 +1,26 @@
+{
+  "name": "wapi",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "install:all": "pnpm install --config.block-exotic-subdeps=false",
+    "db:generate": "pnpm --filter @wapi/db db:generate",
+    "db:migrate": "pnpm --filter @wapi/db db:migrate",
+    "db:studio": "pnpm --filter @wapi/db db:studio"
+  },
+  "pnpm": {
+    "blockExoticSubdeps": false
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  }
+}

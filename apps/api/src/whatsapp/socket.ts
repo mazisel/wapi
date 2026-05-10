@@ -1,0 +1,123 @@
+import makeWASocket, {
+  useMultiFileAuthState,
+  DisconnectReason,
+  fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore,
+  type WASocket,
+} from "@whiskeysockets/baileys";
+import type { Boom } from "@hapi/boom";
+import path from "path";
+import { config } from "../config/index.js";
+import { logger } from "../utils/logger.js";
+import { deviceRepo } from "../db/repositories/device.repo.js";
+import { broadcastQr, broadcastConnected, broadcastDisconnected } from "./qr.js";
+import { bindMessageEvents } from "./events.js";
+import { webhookDispatcher } from "../webhooks/dispatcher.js";
+import { RECONNECT_DELAYS_MS, MAX_RECONNECT_ATTEMPTS } from "../config/constants.js";
+
+export class WhatsAppSocket {
+  private socket: WASocket | null = null;
+  private reconnectAttempts = 0;
+  private isDestroyed = false;
+
+  constructor(
+    public readonly deviceId: string,
+    private readonly sessionDir: string
+  ) {}
+
+  async initialize(): Promise<void> {
+    if (this.isDestroyed) return;
+
+    const { version } = await fetchLatestBaileysVersion();
+    const { state, saveCreds } = await useMultiFileAuthState(this.sessionDir);
+
+    const log = logger.child({ deviceId: this.deviceId });
+
+    this.socket = makeWASocket({
+      version,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, log as any),
+      },
+      printQRInTerminal: false,
+      logger: log as any,
+      browser: ["Wapi", "Chrome", "130.0.0"],
+      generateHighQualityLinkPreview: false,
+    });
+
+    this.socket.ev.on("creds.update", saveCreds);
+
+    this.socket.ev.on("connection.update", async (update) => {
+      const { connection, lastDisconnect, qr } = update;
+
+      if (qr) {
+        await broadcastQr(this.deviceId, qr);
+      }
+
+      if (connection === "open") {
+        this.reconnectAttempts = 0;
+        const phone = this.socket?.user?.id
+          ? this.socket.user.id.split(":")[0]
+          : undefined;
+
+        await deviceRepo.updateStatus(this.deviceId, "connected", phone);
+        broadcastConnected(this.deviceId, phone ?? "");
+        await webhookDispatcher.fire("device.connected", {
+          device_id: this.deviceId,
+          phone,
+        });
+        log.info("Bağlantı açıldı");
+      }
+
+      if (connection === "close") {
+        const statusCode =
+          (lastDisconnect?.error as Boom)?.output?.statusCode ?? 0;
+
+        log.warn({ statusCode }, "Bağlantı kapandı");
+
+        if (statusCode === DisconnectReason.loggedOut) {
+          await deviceRepo.updateStatus(this.deviceId, "banned");
+          log.error("Cihaz bant dışı edildi");
+          return;
+        }
+
+        await this.scheduleReconnect();
+      }
+    });
+
+    bindMessageEvents(this.socket, this.deviceId);
+  }
+
+  private async scheduleReconnect(): Promise<void> {
+    if (this.isDestroyed) return;
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      await deviceRepo.updateStatus(this.deviceId, "disconnected");
+      broadcastDisconnected(this.deviceId);
+      await webhookDispatcher.fire("device.disconnected", {
+        device_id: this.deviceId,
+      });
+      return;
+    }
+
+    const delay = RECONNECT_DELAYS_MS[this.reconnectAttempts] ?? 120_000;
+    this.reconnectAttempts++;
+
+    logger.info(
+      { deviceId: this.deviceId, attempt: this.reconnectAttempts, delay },
+      `${delay}ms sonra yeniden bağlanılıyor`
+    );
+
+    setTimeout(() => this.initialize(), delay);
+  }
+
+  getSocket(): WASocket | null {
+    return this.socket;
+  }
+
+  async destroy(): Promise<void> {
+    this.isDestroyed = true;
+    await this.socket?.logout();
+    this.socket?.end(undefined);
+    this.socket = null;
+  }
+}

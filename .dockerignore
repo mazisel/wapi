@@ -1,0 +1,32 @@
+# Güvenlik
+.env
+.env.local
+.env.*.local
+
+# Bağımlılıklar — Dockerfile içinde yeniden yüklenir
+node_modules
+**/node_modules
+
+# Build çıktıları
+dist
+**/.next
+**/dist
+
+# Session ve veritabanı dosyaları
+data/sessions
+data/*.db*
+
+# Loglar
+logs
+*.log
+
+# Turbo cache
+.turbo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore

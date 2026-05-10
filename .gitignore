@@ -1,0 +1,22 @@
+node_modules
+.env
+dist
+.turbo
+
+# Sessions & DB (persistent volumes)
+data/sessions/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# Logs
+logs/
+*.log
+
+# Next.js
+apps/admin/.next/
+apps/admin/out/
+
+# OS
+.DS_Store
+Thumbs.db
