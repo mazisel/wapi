@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import useSWR from "swr";
 import { apiFetch } from "@/lib/api";
+import { useAuth } from "@/lib/useAuth";
 
 interface ApiKey {
   id: string;
@@ -15,6 +16,7 @@ interface ApiKey {
 }
 
 export default function ApiKeysPage() {
+  useAuth();
   const { data, mutate } = useSWR("/api/v1/api-keys", (path: string) =>
     apiFetch<{ api_keys: ApiKey[] }>(path).then((d) => d.api_keys)
   );

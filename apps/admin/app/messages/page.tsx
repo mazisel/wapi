@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { apiFetch } from "@/lib/api";
+import { useAuth } from "@/lib/useAuth";
 
 interface Message {
   id: string;
@@ -26,6 +27,7 @@ const statusColor: Record<string, string> = {
 };
 
 export default function MessagesPage() {
+  useAuth();
   const [deviceFilter, setDeviceFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);

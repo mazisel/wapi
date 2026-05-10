@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import useSWR from "swr";
 import { apiFetch } from "@/lib/api";
 import { QRScanner } from "@/components/QRScanner";
+import { useAuth } from "@/lib/useAuth";
 
 interface Device {
   id: string;
@@ -28,6 +29,7 @@ const statusColor: Record<Device["status"], string> = {
 };
 
 export default function DevicesPage() {
+  useAuth();
   const { data, mutate } = useSWR("/api/v1/devices", (path: string) =>
     apiFetch<{ devices: Device[] }>(path).then((d) => d.devices)
   );

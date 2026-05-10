@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { useAuth } from "@/lib/useAuth";
 
 interface MetricDevice {
   id: string;
@@ -13,6 +14,7 @@ interface MetricDevice {
 }
 
 export default function Dashboard() {
+  useAuth();
   const [metrics, setMetrics] = useState<MetricDevice[]>([]);
   const [loading, setLoading] = useState(true);
 
