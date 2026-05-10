@@ -1,10 +1,17 @@
-import makeWASocket, {
+import baileysPkg, {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   type WASocket,
 } from "@whiskeysockets/baileys";
+
+// CJS modülü tsx/ESM interop ile bazen { default: fn } olarak geliyor —
+// her iki şekli de tolere et
+const makeWASocket: any =
+  typeof baileysPkg === "function"
+    ? baileysPkg
+    : (baileysPkg as any)?.default ?? baileysPkg;
 import type { Boom } from "@hapi/boom";
 import path from "path";
 import { config } from "../config/index.js";
