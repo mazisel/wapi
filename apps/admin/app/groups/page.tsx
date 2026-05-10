@@ -127,7 +127,7 @@ export default function GroupsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Grup İzleme</h1>
+        <h1 className="text-2xl font-bold">Grup İzleme & Uyarı Sistemi</h1>
         <button
           onClick={() => setShowForm((v) => !v)}
           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"

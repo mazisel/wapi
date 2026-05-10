@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
@@ -13,9 +14,17 @@ interface MetricDevice {
   today_failed: number;
 }
 
+interface MonitorSummary {
+  id: string;
+  is_active: boolean;
+  alert_group_jids: string[];
+  alert_contacts: string[];
+}
+
 export default function Dashboard() {
   useAuth();
   const [metrics, setMetrics] = useState<MetricDevice[]>([]);
+  const [monitors, setMonitors] = useState<MonitorSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,10 +32,20 @@ export default function Dashboard() {
       .then((d) => setMetrics(d.devices))
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    apiFetch<{ monitors: MonitorSummary[] }>("/api/v1/group-monitors")
+      .then((d) => setMonitors(d.monitors))
+      .catch(console.error);
   }, []);
 
   const connected = metrics.filter((d) => d.status === "connected").length;
   const disconnected = metrics.length - connected;
+  const activeMonitors = monitors.filter((m) => m.is_active).length;
+  const alertTargets = monitors.reduce(
+    (total, monitor) =>
+      total + monitor.alert_group_jids.length + monitor.alert_contacts.length,
+    0
+  );
 
   const statusColor: Record<string, string> = {
     connected: "bg-green-100 text-green-800",
@@ -39,11 +58,40 @@ export default function Dashboard() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard label="Toplam Cihaz" value={metrics.length} />
         <StatCard label="Bağlı" value={connected} color="text-green-600" />
         <StatCard label="Bağlı Değil" value={disconnected} />
       </div>
+
+      <section className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">
+              Grup İzleme & Uyarı Sistemi
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Aktif izleme ve uyarı kanalları
+            </p>
+          </div>
+          <Link
+            href="/groups"
+            className="shrink-0 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            Yönet
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+          <StatCard label="Toplam Monitör" value={monitors.length} />
+          <StatCard
+            label="Aktif Monitör"
+            value={activeMonitors}
+            color="text-green-600"
+          />
+          <StatCard label="Uyarı Kanalı" value={alertTargets} />
+        </div>
+      </section>
 
       <h2 className="text-lg font-semibold">Cihaz Durumları</h2>
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
