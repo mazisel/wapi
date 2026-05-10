@@ -43,7 +43,7 @@ export const messages = pgTable("messages", {
   id: text("id").primaryKey(),
   deviceId: text("device_id")
     .notNull()
-    .references(() => devices.id),
+    .references(() => devices.id, { onDelete: "cascade" }),
   toNumber: text("to_number").notNull(),
   body: text("body").notNull(),
   type: text("type", { enum: ["text", "image", "document", "audio"] })
@@ -70,7 +70,7 @@ export const incomingMessages = pgTable("incoming_messages", {
   id: text("id").primaryKey(),
   deviceId: text("device_id")
     .notNull()
-    .references(() => devices.id),
+    .references(() => devices.id, { onDelete: "cascade" }),
   fromNumber: text("from_number").notNull(),
   body: text("body"),
   type: text("type").default("text"),
@@ -98,7 +98,7 @@ export const deviceStats = pgTable(
   {
     deviceId: text("device_id")
       .notNull()
-      .references(() => devices.id),
+      .references(() => devices.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     messagesSent: integer("messages_sent").notNull().default(0),
     messagesFailed: integer("messages_failed").notNull().default(0),
@@ -109,7 +109,7 @@ export const deviceStats = pgTable(
 export const rateLimitState = pgTable("rate_limit_state", {
   deviceId: text("device_id")
     .primaryKey()
-    .references(() => devices.id),
+    .references(() => devices.id, { onDelete: "cascade" }),
   hourlyCount: integer("hourly_count").notNull().default(0),
   hourlyWindow: timestamp("hourly_window", { withTimezone: true }),
   dailyCount: integer("daily_count").notNull().default(0),
