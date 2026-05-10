@@ -4,6 +4,7 @@ import { logger } from "./utils/logger.js";
 import { buildServer } from "./api/server.js";
 import { deviceManager } from "./whatsapp/manager.js";
 import { startScheduler } from "./queue/scheduler.js";
+import { startAlertWorker } from "./group-monitor/alert-processor.js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { db } from "./db/index.js";
 import path from "path";
@@ -23,6 +24,7 @@ async function main() {
 
   await deviceManager.initialize();
   startScheduler();
+  startAlertWorker();
 
   await app.listen({ port: config.PORT, host: config.HOST });
   logger.info(`Wapi API ${config.HOST}:${config.PORT} adresinde çalışıyor`);

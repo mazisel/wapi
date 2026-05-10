@@ -7,6 +7,7 @@ import { apiKeyRoutes } from "./routes/api-keys.js";
 import { webhookRoutes } from "./routes/webhooks.js";
 import { deviceRoutes } from "./routes/devices.js";
 import { messageRoutes } from "./routes/messages.js";
+import { groupMonitorRoutes } from "./routes/group-monitors.js";
 import {
   validateQrToken,
   subscribeQr,
@@ -52,6 +53,7 @@ export async function buildServer() {
       await api.register(webhookRoutes);
       await api.register(deviceRoutes);
       await api.register(messageRoutes);
+      await api.register(groupMonitorRoutes);
     },
     { prefix: "/api/v1" }
   );

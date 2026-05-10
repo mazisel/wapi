@@ -14,6 +14,7 @@ export function NavBar() {
     { href: "/", label: "Dashboard" },
     { href: "/devices", label: "Cihazlar" },
     { href: "/messages", label: "Mesajlar" },
+    { href: "/groups", label: "Gruplar" },
     { href: "/api-keys", label: "API Keys" },
   ];
 

@@ -15,6 +15,13 @@
       "when": 1778415851716,
       "tag": "0001_omniscient_vampiro",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778420187358,
+      "tag": "0002_glossy_moondragon",
+      "breakpoints": true
     }
   ]
 }

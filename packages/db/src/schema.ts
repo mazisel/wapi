@@ -79,6 +79,9 @@ export const incomingMessages = pgTable("incoming_messages", {
     .notNull()
     .defaultNow(),
   webhookSent: boolean("webhook_sent").notNull().default(false),
+  groupJid: text("group_jid"),
+  senderJid: text("sender_jid"),
+  isGroup: boolean("is_group").notNull().default(false),
 });
 
 export const webhooks = pgTable("webhooks", {
@@ -124,6 +127,45 @@ export const validatedNumbers = pgTable("validated_numbers", {
     .defaultNow(),
 });
 
+export const groupMonitors = pgTable("group_monitors", {
+  id: text("id").primaryKey(),
+  deviceId: text("device_id")
+    .notNull()
+    .references(() => devices.id, { onDelete: "cascade" }),
+  groupJid: text("group_jid").notNull(),
+  groupName: text("group_name"),
+  teamNumbers: text("team_numbers").array().notNull().default([]),
+  alertGroupJids: text("alert_group_jids").array().notNull().default([]),
+  alertContacts: text("alert_contacts").array().notNull().default([]),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const groupAlerts = pgTable("group_alerts", {
+  id: text("id").primaryKey(),
+  monitorId: text("monitor_id")
+    .notNull()
+    .references(() => groupMonitors.id, { onDelete: "cascade" }),
+  triggerMsgId: text("trigger_msg_id"),
+  senderJid: text("sender_jid").notNull(),
+  senderName: text("sender_name"),
+  messageText: text("message_text"),
+  status: text("status", {
+    enum: ["watching", "wave1_sent", "wave2_sent", "resolved"],
+  })
+    .notNull()
+    .default("watching"),
+  resolvedBy: text("resolved_by"),
+  wave1SentAt: timestamp("wave1_sent_at", { withTimezone: true }),
+  wave2SentAt: timestamp("wave2_sent_at", { withTimezone: true }),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type Device = typeof devices.$inferSelect;
 export type NewDevice = typeof devices.$inferInsert;
 export type ApiKey = typeof apiKeys.$inferSelect;
@@ -136,3 +178,7 @@ export type Webhook = typeof webhooks.$inferSelect;
 export type NewWebhook = typeof webhooks.$inferInsert;
 export type DeviceStats = typeof deviceStats.$inferSelect;
 export type RateLimitState = typeof rateLimitState.$inferSelect;
+export type GroupMonitor = typeof groupMonitors.$inferSelect;
+export type NewGroupMonitor = typeof groupMonitors.$inferInsert;
+export type GroupAlert = typeof groupAlerts.$inferSelect;
+export type NewGroupAlert = typeof groupAlerts.$inferInsert;
