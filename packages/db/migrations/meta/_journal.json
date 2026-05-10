@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1778414057653,
+      "tag": "0000_curved_quasar",
+      "breakpoints": true
+    }
+  ]
+}

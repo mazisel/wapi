@@ -25,6 +25,7 @@ COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 
 # Kaynak kodlar
 COPY packages/db/src ./packages/db/src
+COPY packages/db/migrations ./packages/db/migrations
 COPY packages/db/package.json ./packages/db/
 
 COPY apps/api/src ./apps/api/src
