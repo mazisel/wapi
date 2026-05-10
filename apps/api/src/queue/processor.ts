@@ -21,7 +21,7 @@ export function startWorker(deviceId: string): Worker<MessageJobData> {
   }
 
   const worker = new Worker<MessageJobData>(
-    `${QUEUE_NAME_PREFIX}:${deviceId}:messages`,
+    `${QUEUE_NAME_PREFIX}-${deviceId}-messages`,
     async (job: Job<MessageJobData>) => {
       await processMessage(job);
     },

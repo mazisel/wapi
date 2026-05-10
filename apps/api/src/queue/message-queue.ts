@@ -20,7 +20,7 @@ const queues = new Map<string, Queue<MessageJobData>>();
 export function getQueue(deviceId: string): Queue<MessageJobData> {
   if (!queues.has(deviceId)) {
     const queue = new Queue<MessageJobData>(
-      `${QUEUE_NAME_PREFIX}:${deviceId}:messages`,
+      `${QUEUE_NAME_PREFIX}-${deviceId}-messages`,
       {
         connection,
         defaultJobOptions: {
