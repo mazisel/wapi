@@ -1,7 +1,7 @@
 import { logger } from "../utils/logger.js";
 import { generateId } from "../utils/crypto.js";
 import { groupMonitorRepo, groupAlertRepo } from "../db/repositories/group-monitor.repo.js";
-import { enqueueWave1 } from "./alert-queue.js";
+import { enqueueWave1, cancelAlertJobs } from "./alert-queue.js";
 
 function normalizeNumber(jid: string): string {
   return jid.replace(/@.*/, "").replace(/:\d+/, "");
@@ -30,9 +30,10 @@ export async function handleGroupMessage(opts: {
     const open = await groupAlertRepo.findOpenByMonitor(monitor.id);
     if (open.length > 0) {
       await groupAlertRepo.resolveOpenAlerts(monitor.id, senderJid);
+      await Promise.all(open.map((a) => cancelAlertJobs(a.id)));
       logger.info(
         { monitorId: monitor.id, resolvedBy: senderJid, count: open.length },
-        "Grup uyarıları çözüldü"
+        "Grup uyarıları çözüldü, kuyruk işleri iptal edildi"
       );
     }
     return;

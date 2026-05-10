@@ -44,4 +44,14 @@ export async function enqueueWave2(alertId: string): Promise<void> {
   );
 }
 
+export async function cancelAlertJobs(alertId: string): Promise<void> {
+  const queue = getAlertQueue();
+  try {
+    await queue.remove(`wave1-${alertId}`);
+  } catch {}
+  try {
+    await queue.remove(`wave2-${alertId}`);
+  } catch {}
+}
+
 export { ALERT_QUEUE_NAME };

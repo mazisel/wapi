@@ -14,6 +14,21 @@ export function bindMessageEvents(socket: WASocket, deviceId: string) {
     for (const msg of messages) {
       if (msg.key.fromMe) {
         await handleOutgoingUpdate(msg, deviceId);
+
+        const remoteJid = msg.key.remoteJid ?? "";
+        if (remoteJid.endsWith("@g.us") && socket.user?.id) {
+          await handleGroupMessage({
+            deviceId,
+            groupJid: remoteJid,
+            senderJid: socket.user.id,
+            senderName: socket.user.name ?? undefined,
+            text:
+              msg.message?.conversation ||
+              msg.message?.extendedTextMessage?.text ||
+              "",
+            waMsgId: msg.key.id ?? undefined,
+          });
+        }
         continue;
       }
 
