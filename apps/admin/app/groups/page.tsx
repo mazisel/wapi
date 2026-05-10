@@ -31,8 +31,7 @@ interface Monitor {
 
 const EMPTY_FORM = {
   device_id: "",
-  group_jid: "",
-  group_name: "",
+  group_jids: [] as string[],
   team_numbers: "",
   alert_group_jids: [] as string[],
   alert_contacts: "",
@@ -62,18 +61,25 @@ export default function GroupsPage() {
   );
 
   const handleSave = useCallback(async () => {
-    if (!form.device_id || !form.group_jid) {
-      alert("Cihaz ve grup seçmek zorunludur.");
+    if (!form.device_id || form.group_jids.length === 0) {
+      alert("Cihaz ve en az bir grup seçmek zorunludur.");
       return;
     }
     setSaving(true);
     try {
+      const selectedGroups = form.group_jids.map((jid) => {
+        const group = groups?.find((g) => g.jid === jid);
+        return {
+          group_jid: jid,
+          group_name: group?.name,
+        };
+      });
+
       await apiFetch("/api/v1/group-monitors", {
         method: "POST",
         body: JSON.stringify({
           device_id: form.device_id,
-          group_jid: form.group_jid,
-          group_name: form.group_name || undefined,
+          groups: selectedGroups,
           team_numbers: form.team_numbers
             .split(",")
             .map((s) => s.trim())
@@ -93,7 +99,7 @@ export default function GroupsPage() {
     } finally {
       setSaving(false);
     }
-  }, [form, mutateMonitors]);
+  }, [form, groups, mutateMonitors]);
 
   const toggleActive = useCallback(
     async (monitor: Monitor) => {
@@ -124,6 +130,15 @@ export default function GroupsPage() {
     }));
   };
 
+  const toggleWatchedGroup = (jid: string) => {
+    setForm((f) => ({
+      ...f,
+      group_jids: f.group_jids.includes(jid)
+        ? f.group_jids.filter((j) => j !== jid)
+        : [...f.group_jids, jid],
+    }));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -147,7 +162,14 @@ export default function GroupsPage() {
             <select
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               value={form.device_id}
-              onChange={(e) => setForm((f) => ({ ...f, device_id: e.target.value, group_jid: "", alert_group_jids: [] }))}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  device_id: e.target.value,
+                  group_jids: [],
+                  alert_group_jids: [],
+                }))
+              }
             >
               <option value="">Cihaz seçin...</option>
               {(devices ?? []).map((d) => (
@@ -161,30 +183,39 @@ export default function GroupsPage() {
           {form.device_id && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                İzlenecek Grup
+                İzlenecek Gruplar{" "}
+                <span className="text-gray-400 font-normal">
+                  ({form.group_jids.length} seçili)
+                </span>
               </label>
               {!groups ? (
                 <p className="text-sm text-gray-400">Gruplar yükleniyor...</p>
               ) : (
-                <select
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  value={form.group_jid}
-                  onChange={(e) => {
-                    const g = groups.find((g) => g.jid === e.target.value);
-                    setForm((f) => ({
-                      ...f,
-                      group_jid: e.target.value,
-                      group_name: g?.name ?? "",
-                    }));
-                  }}
-                >
-                  <option value="">Grup seçin...</option>
+                <div className="space-y-1 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2">
                   {groups.map((g) => (
-                    <option key={g.jid} value={g.jid}>
-                      {g.name} ({g.participant_count} üye)
-                    </option>
+                    <label
+                      key={g.jid}
+                      className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 px-2 py-1 rounded"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.group_jids.includes(g.jid)}
+                        onChange={() => toggleWatchedGroup(g.jid)}
+                      />
+                      <span className="flex-1">
+                        {g.name}{" "}
+                        <span className="text-gray-400">
+                          ({g.participant_count} üye)
+                        </span>
+                      </span>
+                    </label>
                   ))}
-                </select>
+                  {groups.length === 0 && (
+                    <p className="text-sm text-gray-400 px-2 py-1">
+                      Bu cihaz için grup bulunamadı.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}

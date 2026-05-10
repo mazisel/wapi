@@ -51,7 +51,7 @@ export class WhatsAppSocket {
 
     const log = logger.child({ deviceId: this.deviceId });
 
-    this.socket = makeWASocket({
+    const socket: WASocket = makeWASocket({
       version,
       auth: {
         creds: state.creds,
@@ -62,12 +62,13 @@ export class WhatsAppSocket {
       browser: ["Wapi", "Chrome", "130.0.0"],
       generateHighQualityLinkPreview: false,
     });
+    this.socket = socket;
 
     logger.info({ deviceId: this.deviceId }, "Baileys socket oluşturuldu");
 
-    this.socket.ev.on("creds.update", saveCreds);
+    socket.ev.on("creds.update", saveCreds);
 
-    this.socket.ev.on("connection.update", async (update) => {
+    socket.ev.on("connection.update", async (update) => {
       const { connection, lastDisconnect, qr } = update;
 
       logger.info(
@@ -81,8 +82,8 @@ export class WhatsAppSocket {
 
       if (connection === "open") {
         this.reconnectAttempts = 0;
-        const phone = this.socket?.user?.id
-          ? this.socket.user.id.split(":")[0]
+        const phone = socket.user?.id
+          ? socket.user.id.split(":")[0]
           : undefined;
 
         await deviceRepo.updateStatus(this.deviceId, "connected", phone);
@@ -110,7 +111,7 @@ export class WhatsAppSocket {
       }
     });
 
-    bindMessageEvents(this.socket, this.deviceId);
+    bindMessageEvents(socket, this.deviceId);
   }
 
   private async scheduleReconnect(): Promise<void> {
